@@ -16,3 +16,15 @@ returns NULL. Otherwise, the total number of 32-byte object will store in **tota
    * I declare two Boolean arrays (**used32[1024]** and **used1024[32]**) to keep track of the state of each block of memory of 32-byte and 1024-byte object. Each index from these two arrays will correspond to the base address of each block in **g_pool_heap[]**. False means free and True means used. When the user calls pool_malloc(), the function will traverse one of these two boolean arrays to check available block, if it finds one then it will return the its index. We will use this index to find where the block locates in g_pool_heap[] by following the equation:
       * 32-byte object: 32*index -> location of free block in g_pool_heap[] 
       * 1024-byte object: (index * 1024) + 32768 -> location of free block in g_pool_heap[]
+   * After knowing the location of free block, the function will assign **used32[index] = true** or **used1024[index] = true** and return the address of the block to the user.
+   *  To free a block of memory, it will take the given address of pointer that provided by users, take it and minus the base address of g_pool_heap[], use that number to check whether the address belongs to the first half (32-byte object) of the array or second half (1024-byte object) of the array. Use the following equation to find the index of this block based on the address.
+      *  32-byte object:  address = given pointer – base address of g_pool_heap[]
+      *  Index = address / 32
+      *  Used32[index] = false (mark this block as free)
+      *  1024-byte object: address = given pointer – base address of g_pool_heap[]
+      *  Index = (address – 32768) / 1024
+      *  Used1024[index] = false (mark this block as free)
+## Trade-offs
+   * Initialized two global Boolean arrays to keep track of the state of each block in the pool allocator. This can lead to use extra space in my implementation.
+   *  For the time complexity, I need to iterate the whole array in used32[] or used1024[] to find a free block for users. This can lead to O(N) time. Obviously this implementation will not be efficient if the given block_sizes[] can be up to thousands of block.
+   *  Internal fragmentation will happen if the user requests a block of 32-byte object but there is no more block of 32-byte, it has to check if there is any available 1024-byte object, if it is, then the allocator has to return this block for the user. (Ask for a block of 32-byte object but receive a block of 1024 => **internal fragmentation**).
